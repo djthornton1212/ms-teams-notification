@@ -29,7 +29,7 @@ export function createMessageCard(
     title: notificationSummary,
     sections: [
       {
-        activityTitle: `**CI #${runNum} (commit ${sha.substr(
+        activityTitle: `**CI #${runNum} (commit ${sha.substring(
           0,
           7
         )})** on [${repoName}](${repoUrl})`,
