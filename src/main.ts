@@ -24,6 +24,7 @@ async function run(): Promise<void> {
       required: true
     })
 
+    // Hardcoded event type
     const customFacts = core.getInput('custom-facts')
     let factsObj = [
       new Fact(
@@ -32,6 +33,7 @@ async function run(): Promise<void> {
       )
     ]
 
+    // Read custom facts from input
     if (customFacts && customFacts.toLowerCase() !== 'null') {
       try {
         let customFactsCounter = 0
@@ -53,7 +55,9 @@ async function run(): Promise<void> {
     const notificationSummary =
       core.getInput('notification-summary') || 'GitHub Action Notification'
     const notificationColor = core.getInput('notification-color') || '0b93ff'
-    const pullRequest = core.getInput('pull-request') || false
+    const viewChanges = core.getInput('view-commit-changes') ? true : false
+    const viewPullRequest = core.getInput('view-pull-request') ? true : false
+    const viewWorkflowRun = core.getInput('view-workflow-run') ? true : false
     const timezone = core.getInput('timezone') || 'UTC'
 
     const timestamp = moment()
@@ -65,9 +69,10 @@ async function run(): Promise<void> {
     const runId = process.env.GITHUB_RUN_ID || ''
     const runNum = process.env.GITHUB_RUN_NUMBER || ''
     const params = {owner, repo, ref: sha}
-    const pullNumber = pullRequest
-      ? JSON.stringify(github.context.issue.number)
-      : ''
+    const pullNumber =
+      process.env.GITHUB_EVENT_NAME?.startsWith('pull') && viewPullRequest
+        ? JSON.stringify(github.context.issue.number)
+        : ''
     const repoName = params.owner + '/' + params.repo
     const repoUrl = `https://github.com/${repoName}`
 
@@ -87,7 +92,9 @@ async function run(): Promise<void> {
       repoUrl,
       timestamp,
       pullNumber,
-      factsObj
+      factsObj,
+      viewChanges,
+      viewWorkflowRun
     )
 
     console.log(messageCard)
@@ -103,7 +110,11 @@ async function run(): Promise<void> {
       })
   } catch (error) {
     console.log(error)
-    core.setFailed(error.message)
+    let errorMessage = 'Failed to do something exceptional'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    }
+    core.setFailed(errorMessage)
   }
 }
 

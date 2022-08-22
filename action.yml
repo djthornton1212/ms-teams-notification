@@ -20,8 +20,14 @@ inputs:
   notification-color:
     description: 'Color of notification header line'
     required: true
-  pull-request:
+  view-commit-changes:
+    description: 'Activates `view commit changes` button.'
+    required: false
+  view-pull-request:
     description: 'Activates `view pull request` button.'
+    required: false
+  view-workflow-run:
+    description: 'Activates `view workflow run` button.'
     required: false
   timezone:
     description: 'Timezone (ex. America/Denver)'

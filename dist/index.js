@@ -5977,12 +5977,37 @@ module.exports = require("child_process");
 
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createMessageCard = void 0;
-function createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj) {
+function createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj, viewChanges, viewWorkflowRun) {
     let avatar_url = 'https://www.gravatar.com/avatar/05b6d8cc7c662bf81e01b39254f88a48?d=identicon';
     if (author) {
         if (author.avatar_url) {
             avatar_url = author.avatar_url;
         }
+    }
+    let potentialAction = [];
+    if (viewChanges) {
+        potentialAction.push({
+            '@context': 'http://schema.org',
+            target: [commit.data.html_url],
+            '@type': 'ViewAction',
+            name: 'View Commit Changes'
+        });
+    }
+    if (viewWorkflowRun) {
+        potentialAction.push({
+            '@context': 'http://schema.org',
+            target: [`${repoUrl}/actions/runs/${runId}`],
+            '@type': 'ViewAction',
+            name: 'View Workflow Run'
+        });
+    }
+    if (pullNumber) {
+        potentialAction.push({
+            '@context': 'http://schema.org',
+            target: [`${repoUrl}/pull/${pullNumber}`],
+            '@type': 'ViewAction',
+            name: 'View Pull Request'
+        });
     }
     const messageCard = {
         '@type': 'MessageCard',
@@ -5992,34 +6017,17 @@ function createMessageCard(notificationSummary, notificationColor, commit, autho
         title: notificationSummary,
         sections: [
             {
-                activityTitle: `**CI #${runNum} (commit ${sha.substr(0, 7)})** on [${repoName}](${repoUrl})`,
+                activityTitle: `**CI #${runNum} (commit ${sha.substring(0, 7)})** on [${repoName}](${repoUrl})`,
                 activityImage: avatar_url,
-                activitySubtitle: `by ${commit.data.commit.author.name} [(@${author.login})](${author.html_url}) on ${timestamp}`,
+                activitySubtitle: `by ${commit.data.commit.author.name}
+          [(@${author.login})](${author.html_url}) on ${timestamp}`,
                 facts: factsObj
             }
         ],
-        potentialAction: [
-            {
-                '@context': 'http://schema.org',
-                target: [`${repoUrl}/actions/runs/${runId}`],
-                '@type': 'ViewAction',
-                name: 'View Workflow Run'
-            },
-            {
-                '@context': 'http://schema.org',
-                target: [commit.data.html_url],
-                '@type': 'ViewAction',
-                name: 'View Commit Changes'
-            }
-        ]
+        potentialAction: potentialAction
     };
-    if (pullNumber) {
-        messageCard.potentialAction.push({
-            '@context': 'http://schema.org',
-            target: [`${repoUrl}/pull/${pullNumber}`],
-            '@type': 'ViewAction',
-            name: 'View Pull Request'
-        });
+    if (potentialAction.length > 0) {
+        messageCard.potentialAction = potentialAction;
     }
     return messageCard;
 }
@@ -7859,17 +7867,19 @@ const escapeMarkdownTokens = (text) => text
     .replace(/-/g, '\\-')
     .replace(/>/g, '\\>');
 function run() {
-    var _a;
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const githubToken = core.getInput('github-token', { required: true });
             const msTeamsWebhookUri = core.getInput('ms-teams-webhook-uri', {
                 required: true
             });
+            // Hardcoded event type
             const customFacts = core.getInput('custom-facts');
             let factsObj = [
                 new models_1.Fact('Event type:', '`' + ((_a = process.env.GITHUB_EVENT_NAME) === null || _a === void 0 ? void 0 : _a.toUpperCase()) + '`')
             ];
+            // Read custom facts from input
             if (customFacts && customFacts.toLowerCase() !== 'null') {
                 try {
                     let customFactsCounter = 0;
@@ -7885,13 +7895,15 @@ function run() {
                     }
                     console.log(`Added ${customFactsCounter} custom facts.`);
                 }
-                catch (_b) {
+                catch (_c) {
                     console.log('Invalid custom-facts value.');
                 }
             }
             const notificationSummary = core.getInput('notification-summary') || 'GitHub Action Notification';
             const notificationColor = core.getInput('notification-color') || '0b93ff';
-            const pullRequest = core.getInput('pull-request') || false;
+            const viewChanges = core.getInput('view-commit-changes') ? true : false;
+            const viewPullRequest = core.getInput('view-pull-request') ? true : false;
+            const viewWorkflowRun = core.getInput('view-workflow-run') ? true : false;
             const timezone = core.getInput('timezone') || 'UTC';
             const timestamp = moment_timezone_1.default()
                 .tz(timezone)
@@ -7901,14 +7913,14 @@ function run() {
             const runId = process.env.GITHUB_RUN_ID || '';
             const runNum = process.env.GITHUB_RUN_NUMBER || '';
             const params = { owner, repo, ref: sha };
-            const pullNumber = pullRequest ? JSON.stringify(github.context.issue.number)
-                : '';
+            const pullNumber = (((_b = process.env.GITHUB_EVENT_NAME) === null || _b === void 0 ? void 0 : _b.startsWith('PULL')) &&
+                viewPullRequest) ? JSON.stringify(github.context.issue.number) : '';
             const repoName = params.owner + '/' + params.repo;
             const repoUrl = `https://github.com/${repoName}`;
             const octokit = new rest_1.Octokit({ auth: `token ${githubToken}` });
             const commit = yield octokit.repos.getCommit(params);
             const author = commit.data.author;
-            const messageCard = yield message_card_1.createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj);
+            const messageCard = yield message_card_1.createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj, viewChanges, viewWorkflowRun);
             console.log(messageCard);
             axios_1.default
                 .post(msTeamsWebhookUri, messageCard)
@@ -7922,7 +7934,11 @@ function run() {
         }
         catch (error) {
             console.log(error);
-            core.setFailed(error.message);
+            let errorMessage = "Failed to do something exceptional";
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            }
+            core.setFailed(errorMessage);
         }
     });
 }
