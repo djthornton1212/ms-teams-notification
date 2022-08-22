@@ -3,6 +3,8 @@ import {Octokit} from '@octokit/rest'
 import axios from 'axios'
 import moment from 'moment-timezone'
 import {createMessageCard} from './message-card'
+import yaml from 'yaml'
+import {Fact} from './models'
 
 const escapeMarkdownTokens = (text: string) =>
   text
@@ -20,6 +22,32 @@ async function run(): Promise<void> {
     const msTeamsWebhookUri: string = core.getInput('ms-teams-webhook-uri', {
       required: true
     })
+
+    const customFacts = core.getInput('custom-facts')
+    let factsObj = [
+      new Fact(
+        'Event type:',
+        '`' + process.env.GITHUB_EVENT_NAME?.toUpperCase() + '`'
+      )
+    ]
+
+    if (customFacts && customFacts.toLowerCase() !== 'null') {
+      try {
+        let customFactsCounter = 0
+        const customFactsList = yaml.parse(customFacts)
+        if (Array.isArray(customFactsList)) {
+          ;(customFactsList as any[]).forEach(fact => {
+            if (fact.name !== undefined && fact.value !== undefined) {
+              factsObj.push(new Fact(fact.name + ':', '`' + fact.value + '`'))
+              customFactsCounter++
+            }
+          })
+        }
+        console.log(`Added ${customFactsCounter} custom facts.`)
+      } catch {
+        console.log('Invalid custom-facts value.')
+      }
+    }
 
     const notificationSummary =
       core.getInput('notification-summary') || 'GitHub Action Notification'
@@ -52,7 +80,8 @@ async function run(): Promise<void> {
       repoName,
       sha,
       repoUrl,
-      timestamp
+      timestamp,
+      factsObj
     )
 
     console.log(messageCard)
