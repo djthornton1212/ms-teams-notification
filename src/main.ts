@@ -5,6 +5,7 @@ import moment from 'moment-timezone'
 import {createMessageCard} from './message-card'
 import yaml from 'yaml'
 import {Fact} from './models'
+import * as github from '@actions/github'
 
 const escapeMarkdownTokens = (text: string) =>
   text
@@ -52,6 +53,7 @@ async function run(): Promise<void> {
     const notificationSummary =
       core.getInput('notification-summary') || 'GitHub Action Notification'
     const notificationColor = core.getInput('notification-color') || '0b93ff'
+    const pullRequest = core.getInput('pull-request') || false
     const timezone = core.getInput('timezone') || 'UTC'
 
     const timestamp = moment()
@@ -63,6 +65,9 @@ async function run(): Promise<void> {
     const runId = process.env.GITHUB_RUN_ID || ''
     const runNum = process.env.GITHUB_RUN_NUMBER || ''
     const params = {owner, repo, ref: sha}
+    const pullNumber = pullRequest
+      ? JSON.stringify(github.context.issue.number)
+      : ''
     const repoName = params.owner + '/' + params.repo
     const repoUrl = `https://github.com/${repoName}`
 
@@ -81,6 +86,7 @@ async function run(): Promise<void> {
       sha,
       repoUrl,
       timestamp,
+      pullNumber,
       factsObj
     )
 

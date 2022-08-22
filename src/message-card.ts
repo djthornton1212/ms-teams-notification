@@ -11,6 +11,7 @@ export function createMessageCard(
   sha: string,
   repoUrl: string,
   timestamp: string,
+  pullNumber: string,
   factsObj: Fact[]
 ): any {
   let avatar_url =
@@ -51,6 +52,15 @@ export function createMessageCard(
         name: 'View Commit Changes'
       }
     ]
+  }
+
+  if (pullNumber) {
+    messageCard.potentialAction.push({
+      '@context': 'http://schema.org',
+      target: [`${repoUrl}/pull/${pullNumber}`],
+      '@type': 'ViewAction',
+      name: 'View Pull Request'
+    })
   }
   return messageCard
 }
