@@ -44,7 +44,7 @@ export function createMessageCard(
     })
   }
 
-  if (pullNumber) {
+  if (pullNumber != null || pullNumber != '') {
     potentialAction.push({
       '@context': 'http://schema.org',
       target: [`${repoUrl}/pull/${pullNumber}`],

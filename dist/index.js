@@ -6001,7 +6001,7 @@ function createMessageCard(notificationSummary, notificationColor, commit, autho
             name: 'View Workflow Run'
         });
     }
-    if (pullNumber) {
+    if (pullNumber != null || pullNumber != '') {
         potentialAction.push({
             '@context': 'http://schema.org',
             target: [`${repoUrl}/pull/${pullNumber}`],
@@ -7867,7 +7867,7 @@ const escapeMarkdownTokens = (text) => text
     .replace(/-/g, '\\-')
     .replace(/>/g, '\\>');
 function run() {
-    var _a, _b;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const githubToken = core.getInput('github-token', { required: true });
@@ -7895,7 +7895,7 @@ function run() {
                     }
                     console.log(`Added ${customFactsCounter} custom facts.`);
                 }
-                catch (_c) {
+                catch (_d) {
                     console.log('Invalid custom-facts value.');
                 }
             }
@@ -7913,8 +7913,12 @@ function run() {
             const runId = process.env.GITHUB_RUN_ID || '';
             const runNum = process.env.GITHUB_RUN_NUMBER || '';
             const params = { owner, repo, ref: sha };
-            const pullNumber = (((_b = process.env.GITHUB_EVENT_NAME) === null || _b === void 0 ? void 0 : _b.startsWith('PULL')) &&
-                viewPullRequest) ? JSON.stringify(github.context.issue.number) : '';
+            console.log('Match:', (_b = process.env.GITHUB_EVENT_NAME) === null || _b === void 0 ? void 0 : _b.match(/\b(?:issue.*|pull.*)\b/));
+            console.log('viewPullRequest:', viewPullRequest);
+            const pullNumber = (((_c = process.env.GITHUB_EVENT_NAME) === null || _c === void 0 ? void 0 : _c.match(/\b(?:issue.*|pull.*)\b/)) && viewPullRequest)
+                ? JSON.stringify(github.context.issue.number)
+                : '';
+            console.log('Pull Request Number:', pullNumber);
             const repoName = params.owner + '/' + params.repo;
             const repoUrl = `https://github.com/${repoName}`;
             const octokit = new rest_1.Octokit({ auth: `token ${githubToken}` });

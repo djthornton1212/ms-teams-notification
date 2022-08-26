@@ -69,10 +69,13 @@ async function run(): Promise<void> {
     const runId = process.env.GITHUB_RUN_ID || ''
     const runNum = process.env.GITHUB_RUN_NUMBER || ''
     const params = {owner, repo, ref: sha}
+
     const pullNumber =
-      process.env.GITHUB_EVENT_NAME?.startsWith('pull') && viewPullRequest
+      process.env.GITHUB_EVENT_NAME?.match(/\b(?:issue.*|pull.*)\b/) &&
+      viewPullRequest
         ? JSON.stringify(github.context.issue.number)
         : ''
+
     const repoName = params.owner + '/' + params.repo
     const repoUrl = `https://github.com/${repoName}`
 
