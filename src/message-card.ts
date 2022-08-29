@@ -14,7 +14,8 @@ export function createMessageCard(
   pullNumber: string,
   factsObj: Fact[],
   viewChanges: boolean,
-  viewWorkflowRun: boolean
+  viewWorkflowRun: boolean,
+  description: string
 ): any {
   let avatar_url =
     'https://www.gravatar.com/avatar/05b6d8cc7c662bf81e01b39254f88a48?d=identicon'
@@ -59,6 +60,7 @@ export function createMessageCard(
     summary: notificationSummary,
     themeColor: notificationColor,
     title: notificationSummary,
+    text: description,
     sections: [
       {
         activityTitle: `**CI #${runNum} (commit ${sha.substring(

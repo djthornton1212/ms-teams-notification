@@ -54,6 +54,7 @@ async function run(): Promise<void> {
 
     const notificationSummary =
       core.getInput('notification-summary') || 'GitHub Action Notification'
+    const description = core.getInput('description') || ''
     const notificationColor = core.getInput('notification-color') || '0b93ff'
     const viewChanges = core.getInput('view-commit-changes') ? true : false
     const viewPullRequest = core.getInput('view-pull-request') ? true : false
@@ -97,7 +98,8 @@ async function run(): Promise<void> {
       pullNumber,
       factsObj,
       viewChanges,
-      viewWorkflowRun
+      viewWorkflowRun,
+      description
     )
 
     console.log(messageCard)

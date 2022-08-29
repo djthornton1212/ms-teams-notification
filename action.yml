@@ -8,6 +8,9 @@ inputs:
   custom-facts:
     description: YAML-parseable multiline string defining the list of object with name and value to display on the facts table
     required: false
+  description:
+    description: Text description to be communicated under titile
+    required: false
   github-token:
     description: 'GitHub Token'
     required: true

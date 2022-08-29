@@ -5977,7 +5977,7 @@ module.exports = require("child_process");
 
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createMessageCard = void 0;
-function createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj, viewChanges, viewWorkflowRun) {
+function createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj, viewChanges, viewWorkflowRun, description) {
     let avatar_url = 'https://www.gravatar.com/avatar/05b6d8cc7c662bf81e01b39254f88a48?d=identicon';
     if (author) {
         if (author.avatar_url) {
@@ -6015,6 +6015,7 @@ function createMessageCard(notificationSummary, notificationColor, commit, autho
         summary: notificationSummary,
         themeColor: notificationColor,
         title: notificationSummary,
+        text: description,
         sections: [
             {
                 activityTitle: `**CI #${runNum} (commit ${sha.substring(0, 7)})** on [${repoName}](${repoUrl})`,
@@ -7900,6 +7901,7 @@ function run() {
                 }
             }
             const notificationSummary = core.getInput('notification-summary') || 'GitHub Action Notification';
+            const description = core.getInput('description') || '';
             const notificationColor = core.getInput('notification-color') || '0b93ff';
             const viewChanges = core.getInput('view-commit-changes') ? true : false;
             const viewPullRequest = core.getInput('view-pull-request') ? true : false;
@@ -7915,7 +7917,8 @@ function run() {
             const params = { owner, repo, ref: sha };
             console.log('Match:', (_b = process.env.GITHUB_EVENT_NAME) === null || _b === void 0 ? void 0 : _b.match(/\b(?:issue.*|pull.*)\b/));
             console.log('viewPullRequest:', viewPullRequest);
-            const pullNumber = (((_c = process.env.GITHUB_EVENT_NAME) === null || _c === void 0 ? void 0 : _c.match(/\b(?:issue.*|pull.*)\b/)) && viewPullRequest)
+            const pullNumber = ((_c = process.env.GITHUB_EVENT_NAME) === null || _c === void 0 ? void 0 : _c.match(/\b(?:issue.*|pull.*)\b/)) &&
+                viewPullRequest
                 ? JSON.stringify(github.context.issue.number)
                 : '';
             console.log('Pull Request Number:', pullNumber);
@@ -7924,7 +7927,7 @@ function run() {
             const octokit = new rest_1.Octokit({ auth: `token ${githubToken}` });
             const commit = yield octokit.repos.getCommit(params);
             const author = commit.data.author;
-            const messageCard = yield message_card_1.createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj, viewChanges, viewWorkflowRun);
+            const messageCard = yield message_card_1.createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj, viewChanges, viewWorkflowRun, description);
             console.log(messageCard);
             axios_1.default
                 .post(msTeamsWebhookUri, messageCard)
@@ -7938,7 +7941,7 @@ function run() {
         }
         catch (error) {
             console.log(error);
-            let errorMessage = "Failed to do something exceptional";
+            let errorMessage = 'Failed to do something exceptional';
             if (error instanceof Error) {
                 errorMessage = error.message;
             }
