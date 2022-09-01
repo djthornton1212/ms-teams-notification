@@ -40,11 +40,9 @@ async function run(): Promise<void> {
 
     // Hardcoded event type
     const customFacts = core.getInput('custom-facts')
+    const eventName = process.env.GITHUB_EVENT_NAME
     let factsObj = [
-      new Fact(
-        'Event type:',
-        '`' + process.env.GITHUB_EVENT_NAME?.toUpperCase() + '`'
-      )
+      new Fact('Event type:', '`' + eventName?.toUpperCase() + '`')
     ]
 
     // Read custom facts from input
@@ -102,23 +100,25 @@ async function run(): Promise<void> {
     const commit = await octokit.repos.getCommit(params)
     const author = commit.data.author
 
-    const messageCard = await createMessageCard(
-      notificationSummary,
-      notificationColor,
-      commit,
-      author,
-      runNum,
-      runId,
-      repoName,
-      sha,
-      repoUrl,
-      timestamp,
-      pullNumber,
-      factsObj,
-      viewChanges,
-      viewWorkflowRun,
-      description
-    )
+    const messageCard = await createMessageCard({
+      author: author,
+      commit: commit,
+      description: description,
+      factsObj: factsObj,
+      notificationSummary: notificationSummary,
+      notificationColor: notificationColor,
+      pullNumber: pullNumber,
+      pullReview: pullReview,
+      repoName: repoName,
+      repoUrl: repoUrl,
+      runId: runId,
+      runNum: runNum,
+      sha: sha,
+      timestamp: timestamp,
+      viewChanges: viewChanges,
+      viewPullRequest: viewPullRequest,
+      viewWorkflowRun: viewWorkflowRun
+    })
 
     console.log(messageCard)
 

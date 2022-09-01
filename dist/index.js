@@ -5977,26 +5977,25 @@ module.exports = require("child_process");
 
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createMessageCard = void 0;
-function createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj, viewChanges, viewWorkflowRun, description) {
-    let avatar_url = 'https://www.gravatar.com/avatar/05b6d8cc7c662bf81e01b39254f88a48?d=identicon';
-    if (author) {
-        if (author.avatar_url) {
-            avatar_url = author.avatar_url;
-        }
-    }
+function createMessageCard(messageCardObj) {
+    var _a;
     let potentialAction = [];
-    if (viewChanges) {
+    let avatar_url = ((_a = messageCardObj === null || messageCardObj === void 0 ? void 0 : messageCardObj.author) === null || _a === void 0 ? void 0 : _a.avatar_url) ? messageCardObj.author.avatar_url
+        : 'https://www.gravatar.com/avatar/05b6d8cc7c662bf81e01b39254f88a48?d=identicon';
+    if (messageCardObj.viewChanges) {
         potentialAction.push({
             '@context': 'http://schema.org',
-            target: [commit.data.html_url],
+            target: [messageCardObj.commit.data.html_url],
             '@type': 'ViewAction',
             name: 'View Commit Changes'
         });
     }
-    if (viewWorkflowRun) {
+    if (messageCardObj.viewWorkflowRun) {
         potentialAction.push({
             '@context': 'http://schema.org',
-            target: [`${repoUrl}/actions/runs/${runId}`],
+            target: [
+                `${messageCardObj.repoUrl}/actions/runs/${messageCardObj.runId}`
+            ],
             '@type': 'ViewAction',
             name: 'View Workflow Run'
         });
@@ -6018,17 +6017,18 @@ function createMessageCard(notificationSummary, notificationColor, commit, autho
     const messageCard = {
         '@type': 'MessageCard',
         '@context': 'https://schema.org/extensions',
-        summary: notificationSummary,
-        themeColor: notificationColor,
-        title: notificationSummary,
-        text: description,
+        summary: messageCardObj.notificationSummary,
+        themeColor: messageCardObj.notificationColor,
+        title: messageCardObj.notificationSummary,
+        text: messageCardObj.description,
         sections: [
             {
-                activityTitle: `**CI #${runNum} (commit ${sha.substring(0, 7)})** on [${repoName}](${repoUrl})`,
+                activityTitle: `**CI #${messageCardObj.runNum} (commit ${messageCardObj.sha.substring(0, 7)})** on [${messageCardObj.repoName}](${messageCardObj.repoUrl})`,
                 activityImage: avatar_url,
-                activitySubtitle: `by ${commit.data.commit.author.name}
-          [(@${author.login})](${author.html_url}) on ${timestamp}`,
-                facts: factsObj
+                activitySubtitle: `by ${messageCardObj.commit.data.commit.author.name}
+          [(@${messageCardObj.author.login})](${messageCardObj.author.html_url})
+          on ${messageCardObj.timestamp}`,
+                facts: messageCardObj.factsObj
             }
         ],
         potentialAction: potentialAction
@@ -7874,7 +7874,6 @@ const escapeMarkdownTokens = (text) => text
     .replace(/-/g, '\\-')
     .replace(/>/g, '\\>');
 function run() {
-    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const githubToken = core.getInput('github-token', { required: true });
@@ -7897,8 +7896,9 @@ function run() {
             }
             // Hardcoded event type
             const customFacts = core.getInput('custom-facts');
+            const eventName = process.env.GITHUB_EVENT_NAME;
             let factsObj = [
-                new models_1.Fact('Event type:', '`' + ((_a = process.env.GITHUB_EVENT_NAME) === null || _a === void 0 ? void 0 : _a.toUpperCase()) + '`')
+                new models_1.Fact('Event type:', '`' + (eventName === null || eventName === void 0 ? void 0 : eventName.toUpperCase()) + '`')
             ];
             // Read custom facts from input
             if (customFacts && customFacts.toLowerCase() !== 'null') {
@@ -7916,7 +7916,7 @@ function run() {
                     }
                     console.log(`Added ${customFactsCounter} custom facts.`);
                 }
-                catch (_d) {
+                catch (_a) {
                     console.log('Invalid custom-facts value.');
                 }
             }
@@ -7948,7 +7948,25 @@ function run() {
             const octokit = new rest_1.Octokit({ auth: `token ${githubToken}` });
             const commit = yield octokit.repos.getCommit(params);
             const author = commit.data.author;
-            const messageCard = yield message_card_1.createMessageCard(notificationSummary, notificationColor, commit, author, runNum, runId, repoName, sha, repoUrl, timestamp, pullNumber, factsObj, viewChanges, viewWorkflowRun, description);
+            const messageCard = yield message_card_1.createMessageCard({
+                author: author,
+                commit: commit,
+                description: description,
+                factsObj: factsObj,
+                notificationSummary: notificationSummary,
+                notificationColor: notificationColor,
+                pullNumber: pullNumber,
+                pullReview: pullReview,
+                repoName: repoName,
+                repoUrl: repoUrl,
+                runId: runId,
+                runNum: runNum,
+                sha: sha,
+                timestamp: timestamp,
+                viewChanges: viewChanges,
+                viewPullRequest: viewPullRequest,
+                viewWorkflowRun: viewWorkflowRun
+            });
             console.log(messageCard);
             axios_1.default
                 .post(msTeamsWebhookUri, messageCard)
