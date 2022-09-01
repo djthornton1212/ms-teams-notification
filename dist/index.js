@@ -6001,12 +6001,18 @@ function createMessageCard(notificationSummary, notificationColor, commit, autho
             name: 'View Workflow Run'
         });
     }
-    if (pullNumber != null || pullNumber != '') {
+    if (messageCardObj.viewPullRequest && messageCardObj.pullNumber != '') {
+        let name = 'View Pull Request';
+        let target = [`${messageCardObj.repoUrl}/pull/${messageCardObj.pullNumber}`];
+        if (messageCardObj.pullReview) {
+            name = 'View Review';
+            target = [messageCardObj.pullReview];
+        }
         potentialAction.push({
             '@context': 'http://schema.org',
-            target: [`${repoUrl}/pull/${pullNumber}`],
+            target: target,
             '@type': 'ViewAction',
-            name: 'View Pull Request'
+            name: name
         });
     }
     const messageCard = {
@@ -7875,6 +7881,20 @@ function run() {
             const msTeamsWebhookUri = core.getInput('ms-teams-webhook-uri', {
                 required: true
             });
+            let githubEvent;
+            try {
+                const fs = __webpack_require__(747);
+                // read in the github event file
+                const rawdata = fs.readFileSync(process.env.GITHUB_EVENT_PATH);
+                // parse the JSON into a mapping
+                githubEvent = JSON.parse(rawdata);
+                if (process.env.ACTIONS_STEP_DEBUG) {
+                    console.log('Successfully loaded GITHUB_EVENT_PATH', githubEvent);
+                }
+            }
+            catch (error) {
+                console.log('Failed to load GITHUB_EVENT_PATH:', error);
+            }
             // Hardcoded event type
             const customFacts = core.getInput('custom-facts');
             let factsObj = [
@@ -7915,13 +7935,14 @@ function run() {
             const runId = process.env.GITHUB_RUN_ID || '';
             const runNum = process.env.GITHUB_RUN_NUMBER || '';
             const params = { owner, repo, ref: sha };
-            console.log('Match:', (_b = process.env.GITHUB_EVENT_NAME) === null || _b === void 0 ? void 0 : _b.match(/\b(?:issue.*|pull.*)\b/));
-            console.log('viewPullRequest:', viewPullRequest);
-            const pullNumber = ((_c = process.env.GITHUB_EVENT_NAME) === null || _c === void 0 ? void 0 : _c.match(/\b(?:issue.*|pull.*)\b/)) &&
-                viewPullRequest
-                ? JSON.stringify(github.context.issue.number)
-                : '';
-            console.log('Pull Request Number:', pullNumber);
+            let pullNumber = '';
+            let pullReview = '';
+            if ((eventName === null || eventName === void 0 ? void 0 : eventName.match(/\b(?:issue.*|pull.*)\b/)) && viewPullRequest) {
+                pullNumber = JSON.stringify(github.context.issue.number);
+                if (eventName == 'pull_request_review') {
+                    pullReview = githubEvent.review._links.html.href;
+                }
+            }
             const repoName = params.owner + '/' + params.repo;
             const repoUrl = `https://github.com/${repoName}`;
             const octokit = new rest_1.Octokit({ auth: `token ${githubToken}` });

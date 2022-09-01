@@ -24,6 +24,20 @@ async function run(): Promise<void> {
       required: true
     })
 
+    let githubEvent
+    try {
+      const fs = require('fs')
+      // read in the github event file
+      const rawdata = fs.readFileSync(process.env.GITHUB_EVENT_PATH)
+      // parse the JSON into a mapping
+      githubEvent = JSON.parse(rawdata)
+      if (process.env.ACTIONS_STEP_DEBUG) {
+        console.log('Successfully loaded GITHUB_EVENT_PATH', githubEvent)
+      }
+    } catch (error) {
+      console.log('Failed to load GITHUB_EVENT_PATH:', error)
+    }
+
     // Hardcoded event type
     const customFacts = core.getInput('custom-facts')
     let factsObj = [
@@ -71,11 +85,15 @@ async function run(): Promise<void> {
     const runNum = process.env.GITHUB_RUN_NUMBER || ''
     const params = {owner, repo, ref: sha}
 
-    const pullNumber =
-      process.env.GITHUB_EVENT_NAME?.match(/\b(?:issue.*|pull.*)\b/) &&
-      viewPullRequest
-        ? JSON.stringify(github.context.issue.number)
-        : ''
+    let pullNumber = ''
+    let pullReview = ''
+    if (eventName?.match(/\b(?:issue.*|pull.*)\b/) && viewPullRequest) {
+      pullNumber = JSON.stringify(github.context.issue.number)
+
+      if (eventName == 'pull_request_review') {
+        pullReview = githubEvent.review._links.html.href
+      }
+    }
 
     const repoName = params.owner + '/' + params.repo
     const repoUrl = `https://github.com/${repoName}`
