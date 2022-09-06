@@ -3,20 +3,35 @@ description: 'Send a custom notification message to a Microsoft Teams channel wi
 author: 'jdcargile'
 branding:
   icon: message-circle
-  color: purple 
+  color: purple
 inputs:
+  custom-facts:
+    description: YAML-parseable multiline string defining the list of object with name and value to display on the facts table
+    required: false
+  description:
+    description: Text description to be communicated under titile
+    required: false
   github-token:
     description: 'GitHub Token'
-    required: true 
+    required: true
   ms-teams-webhook-uri:
     description: 'Microsoft Teams Webhook URI'
-    required: true 
+    required: true
   notification-summary:
     description: 'Message to be sent to Microsoft Teams channel'
-    required: true 
+    required: true
   notification-color:
     description: 'Color of notification header line'
-    required: true 
+    required: true
+  view-commit-changes:
+    description: 'Activates `view commit changes` button.'
+    required: false
+  view-pull-request:
+    description: 'Activates `view pull request` button.'
+    required: false
+  view-workflow-run:
+    description: 'Activates `view workflow run` button.'
+    required: false
   timezone:
     description: 'Timezone (ex. America/Denver)'
     required: false

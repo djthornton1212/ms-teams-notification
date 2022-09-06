@@ -1,52 +1,72 @@
-export function createMessageCard(
-  notificationSummary: string,
-  notificationColor: string,
-  commit: any,
-  author: any,
-  runNum: string,
-  runId: string,
-  repoName: string,
-  sha: string,
-  repoUrl: string,
-  timestamp: string
-): any {
-  let avatar_url =
-    'https://www.gravatar.com/avatar/05b6d8cc7c662bf81e01b39254f88a48?d=identicon'
-  if (author) {
-    if (author.avatar_url) {
-      avatar_url = author.avatar_url
-    }
+export function createMessageCard(messageCardObj: {[key: string]: any}): any {
+  let potentialAction = []
+
+  let avatar_url = messageCardObj?.author?.avatar_url
+    ? messageCardObj.author.avatar_url
+    : 'https://www.gravatar.com/avatar/05b6d8cc7c662bf81e01b39254f88a48?d=identicon'
+
+  if (messageCardObj.viewChanges) {
+    potentialAction.push({
+      '@context': 'http://schema.org',
+      target: [messageCardObj.commit.data.html_url],
+      '@type': 'ViewAction',
+      name: 'View Commit Changes'
+    })
   }
+
+  if (messageCardObj.viewWorkflowRun) {
+    potentialAction.push({
+      '@context': 'http://schema.org',
+      target: [
+        `${messageCardObj.repoUrl}/actions/runs/${messageCardObj.runId}`
+      ],
+      '@type': 'ViewAction',
+      name: 'View Workflow Run'
+    })
+  }
+
+  if (messageCardObj.viewPullRequest && messageCardObj.pullNumber != '') {
+    let name = 'View Pull Request'
+    let target = [`${messageCardObj.repoUrl}/pull/${messageCardObj.pullNumber}`]
+
+    if (messageCardObj.pullReview) {
+      name = 'View Review'
+      target = [messageCardObj.pullReview]
+    }
+    potentialAction.push({
+      '@context': 'http://schema.org',
+      target: target,
+      '@type': 'ViewAction',
+      name: name
+    })
+  }
+
   const messageCard = {
     '@type': 'MessageCard',
     '@context': 'https://schema.org/extensions',
-    summary: notificationSummary,
-    themeColor: notificationColor,
-    title: notificationSummary,
+    summary: messageCardObj.notificationSummary,
+    themeColor: messageCardObj.notificationColor,
+    title: messageCardObj.notificationSummary,
+    text: messageCardObj.description,
     sections: [
       {
-        activityTitle: `**CI #${runNum} (commit ${sha.substr(
-          0,
-          7
-        )})** on [${repoName}](${repoUrl})`,
+        activityTitle: `**CI #${
+          messageCardObj.runNum
+        } (commit ${messageCardObj.sha.substring(0, 7)})** on [${
+          messageCardObj.repoName
+        }](${messageCardObj.repoUrl})`,
         activityImage: avatar_url,
-        activitySubtitle: `by ${commit.data.commit.author.name} [(@${author.login})](${author.html_url}) on ${timestamp}`
+        activitySubtitle: `by ${messageCardObj.commit.data.commit.author.name}
+          [(@${messageCardObj.author.login})](${messageCardObj.author.html_url})
+          on ${messageCardObj.timestamp}`,
+        facts: messageCardObj.factsObj
       }
     ],
-    potentialAction: [
-      {
-        '@context': 'http://schema.org',
-        target: [`${repoUrl}/actions/runs/${runId}`],
-        '@type': 'ViewAction',
-        name: 'View Workflow Run'
-      },
-      {
-        '@context': 'http://schema.org',
-        target: [commit.data.html_url],
-        '@type': 'ViewAction',
-        name: 'View Commit Changes'
-      }
-    ]
+    potentialAction: potentialAction
+  }
+
+  if (potentialAction.length > 0) {
+    messageCard.potentialAction = potentialAction
   }
   return messageCard
 }
