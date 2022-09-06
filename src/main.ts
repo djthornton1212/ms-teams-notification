@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import {Octokit} from '@octokit/rest'
 import axios from 'axios'
+import axiosRetry from 'axios-retry'
 import moment from 'moment-timezone'
 import {createMessageCard} from './message-card'
 import yaml from 'yaml'
@@ -58,7 +59,9 @@ async function run(): Promise<void> {
             }
           })
         }
-        console.log(`Added ${customFactsCounter} custom facts.`)
+        core.group('Custom Facts', async () => {
+          console.log(`Added ${customFactsCounter} custom facts:`, factsObj)
+        })
       } catch {
         console.log('Invalid custom-facts value.')
       }
@@ -120,17 +123,49 @@ async function run(): Promise<void> {
       viewWorkflowRun: viewWorkflowRun
     })
 
-    console.log(messageCard)
+    core.group('Finalized Message Card', async () => {
+      console.log(messageCard)
+    })
 
-    axios
-      .post(msTeamsWebhookUri, messageCard)
+    // In addition to retrying error code 429, error codes 412, 502, and 504 must also be retried.
+    // https://docs.microsoft.com/en-us/microsoftteams/platform/bots/how-to/rate-limit#handle-http-429-responses
+    axiosRetry(axios, {retries: 3})
+
+    const status = await axios({
+      method: 'post',
+      url: msTeamsWebhookUri,
+      data: messageCard,
+      validateStatus: function(status) {
+        return [200, 400, 429, 412, 502, 504].includes(status)
+      }
+    })
       .then(function(response) {
-        console.log(response)
-        core.debug(response.data)
+        core.group('Full Webhook Response', async () => {
+          console.log(response)
+        })
+        let status: number = response.status
+        if (status == 400) {
+          core.setFailed('Verify your is webhook accurate.')
+        }
+        if ([429, 412, 502, 504].includes(status)) {
+          core.setFailed('Exhausted retries.')
+        }
+        if (status < 200 || status > 399) {
+          core.setFailed('Outside acceptable response codes.')
+        }
+        return response
       })
       .catch(function(error) {
-        core.debug(error)
+        if (error.isAxiosError) {
+          let response = error.response
+          core.error(`Status: ${response.status}\nData: ${response.data}`)
+        }
+        if (!error.isAxiosError) {
+          throw error
+        }
       })
+
+    axiosRetry(axios, {retryDelay: axiosRetry.exponentialDelay})
   } catch (error) {
     console.log(error)
     let errorMessage = 'Failed to do something exceptional'
